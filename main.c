@@ -13,6 +13,19 @@ typedef struct HEADER_TAG {
 
 static HEADER* list = nullptr;
 
+static void print()
+{
+    HEADER* it = list;
+
+    while (it)
+    {
+        printf("%lu ->", it->bloc_size);
+        it = it->ptr_next;
+    }
+
+    printf("\n");
+}
+
 static void split(HEADER* mem, size_t size)
 {
     //+1 to increment by the size of the HEADER and cast the char to increment byte by byte
@@ -76,6 +89,34 @@ static bool check_overflow(void* mem)
     return true;
 }
 
+static HEADER* bloc_end(HEADER* bloc)
+{
+    return (HEADER*)((long*)((char*)(bloc + 1) + bloc->bloc_size) + 1);
+}
+
+static HEADER* merge_blocs(HEADER* bloc1, HEADER* bloc2, bool left)
+{
+    //printf("%lu | %lu | %lu | %lu\n", prev->bloc_size, bloc->bloc_size, sizeof(HEADER), sizeof(long));
+    if (left)
+    {
+        HEADER* it = list;
+        HEADER* prev = nullptr;
+
+        while (it && it != bloc2)
+        {
+            prev = it;
+            it = it->ptr_next;
+        }
+        if (prev)
+            prev->ptr_next = bloc1;
+        else
+            list = bloc1;
+        bloc1->ptr_next = bloc2->ptr_next;
+    }
+    bloc1->bloc_size += bloc2->bloc_size + sizeof(HEADER) + sizeof(long);
+    return bloc1;
+}
+
 static void insert_bloc(void* mem)
 {
     HEADER* bloc = (HEADER*)mem;
@@ -90,8 +131,15 @@ static void insert_bloc(void* mem)
     HEADER* it = list;
     HEADER* prev = nullptr;
 
+    //insert at start
     if (it > bloc)
     {
+        if (bloc_end(bloc) == it)
+        {
+            bloc = merge_blocs(bloc, it, true);
+            printf("MERGE LEFT\n");
+            return;
+        }
         bloc->ptr_next = it;
         list = bloc;
         return;
@@ -102,8 +150,25 @@ static void insert_bloc(void* mem)
         prev = it;
         it = it->ptr_next;
     }
-    prev->ptr_next = bloc;
-    bloc->ptr_next = it;
+
+    bool merged = false;
+    if (prev && bloc_end(prev) == bloc)
+    {
+        bloc = merge_blocs(prev, bloc, false);
+        merged = true;
+        printf("MERGE RIGHT\n");
+    }
+    if (it && bloc_end(bloc) == it)
+    {
+        bloc = merge_blocs(bloc, it, true);
+        merged = true;
+        printf("MERGE LEFT\n");
+    }
+    if (!merged)
+    {
+        prev->ptr_next = bloc;
+        bloc->ptr_next = it;
+    }
 }
 
 static void* malloc_3is(size_t bloc_size)
@@ -150,7 +215,7 @@ int main()
 {
     char* var1 = malloc_3is(6);
 
-    printf("======ADDRESS======\n");
+    printf("======ADDRESS  VAR1======\n");
     printf("%p\n",var1);
 
     printf("======VALUE======\n");
@@ -166,9 +231,9 @@ int main()
     printf("======FOOTER======\n");
     printf("%lx\n",*((long*)(var1 + 6)));
 
-    char* var2 = malloc_3is(8);
+    char* var2 = malloc_3is(200);
 
-    printf("======ADDRESS======\n");
+    printf("======ADDRESS  VAR2======\n");
     printf("%p\n",var2);
 
     printf("======VALUE======\n");
@@ -184,24 +249,41 @@ int main()
     printf("======FOOTER======\n");
     printf("%lx\n",*((long*)(var2 + 8)));
 
+    printf("======RECYCLE TEST======\n");
     free_3is(var1);
+    free_3is(var2);
+    print();
 
     char* var3 = malloc_3is(6);
-
-    printf("======ADDRESS======\n");
+    printf("======ADDRESS VAR3======\n");
     printf("%p\n",var3);
 
-    printf("======VALUE======\n");
-    strcpy(var3,"12345");
-    printf("%s\n",var3);
+    print();
 
-    printf("======HEADER======\n");
-    HEADER* header3 = ((HEADER*)var3)-1;
-    printf("%p\n",header3->ptr_next);
-    printf("%lu\n",header3->bloc_size);
-    printf("%lx\n",header3->magic_number);
+    printf("======SPLIT TEST======\n");
+    //adresses are 38 bytes apart (24 for HEADER + 6 for DATA + 8 for the FOOTER)
 
-    printf("======FOOTER======\n");
-    printf("%lx\n",*((long*)(var3 + 6)));
+    char* var4 = malloc_3is(6);
+
+    printf("======ADDRESS VAR4======\n");
+    printf("%p\n",var4);
+
+    print();
+
+    char* var5 = malloc_3is(12);
+
+    printf("======ADDRESS VAR5======\n");
+    printf("%p\n",var5);
+
+    print();
+
+    free_3is(var4);
+
+    print();
+
+    free_3is(var5);
+
+    print();
+
     return 0;
 }
