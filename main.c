@@ -26,6 +26,28 @@ static bool is_available(size_t size)
     return false;
 }
 
+static void insertBloc(void* mem)
+{
+    HEADER* bloc = (HEADER*)mem;
+    HEADER* it = list;
+    HEADER* prev = NULL;
+
+    if (it > bloc)
+    {
+        bloc->ptr_next = it;
+        list = bloc;
+        return;
+    }
+
+    while (it && it < bloc)
+    {
+        prev = it;
+        it = it->ptr_next;
+    }
+    prev->ptr_next = bloc;
+    bloc->ptr_next = it;
+}
+
 void* malloc_3is(size_t bloc_size)
 {
     size_t total_size = sizeof(HEADER) + bloc_size + sizeof(long);
@@ -53,6 +75,10 @@ void* malloc_3is(size_t bloc_size)
     printf("available");
 }
 
+void free_3is(void* mem)
+{
+    insertBloc(mem);
+}
 
 int main()
 {
@@ -91,6 +117,8 @@ int main()
 
     printf("======FOOTER======\n");
     printf("%lx\n",*((long*)(var2 + 6)));
+
+    free_3is(var1);
 
     return 0;
 }
