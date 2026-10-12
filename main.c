@@ -19,7 +19,7 @@ static bool is_available(size_t size)
     HEADER* it = list;
     while (it)
     {
-        if (it->bloc_size > size)
+        if (it->bloc_size >= size)
             return true;
         it = it->ptr_next;
     }
@@ -28,8 +28,7 @@ static bool is_available(size_t size)
 
 bool check_overflow(void* mem)
 {
-
-    HEADER* header = ((HEADER*)mem)-1;
+    HEADER* header = (HEADER*)mem;
     size_t size = header->bloc_size;
 
     if (header->magic_number != MAGIC_NUMBER)
@@ -38,7 +37,7 @@ bool check_overflow(void* mem)
         return false;
     }
 
-    long footer = *(long*)((char*)mem + size);
+    long footer = *(long*)((char*)(header + 1) + size);
 
     if (footer != MAGIC_NUMBER)
     {
@@ -51,9 +50,16 @@ bool check_overflow(void* mem)
 static void insertBloc(void* mem)
 {
     HEADER* bloc = (HEADER*)mem;
+
+    if (list == NULL)
+    {
+        bloc->ptr_next = NULL;
+        list = bloc;
+        return;
+    }
+
     HEADER* it = list;
     HEADER* prev = NULL;
-
     if (it > bloc)
     {
         bloc->ptr_next = it;
@@ -73,7 +79,7 @@ static void insertBloc(void* mem)
 void* malloc_3is(size_t bloc_size)
 {
     size_t total_size = sizeof(HEADER) + bloc_size + sizeof(long);
-    if (!is_available(total_size))
+    if (!is_available(bloc_size))
     {
         void* mem = sbrk(total_size);
         if (mem == (void*)-1)
@@ -92,15 +98,18 @@ void* malloc_3is(size_t bloc_size)
         long magic = MAGIC_NUMBER;
         memcpy(footer, &magic, sizeof(long));
 
-        return check_overflow(free_mem + 1) ? free_mem + 1 : nullptr;
+        return check_overflow(free_mem) ? free_mem + 1 : nullptr;
     }
     printf("available");
 }
 
 void free_3is(void* mem)
 {
-    if (check_overflow(mem))
-        insertBloc(mem);
+    HEADER* header = ((HEADER*)mem)-1;
+    if (check_overflow(header))
+    {
+        insertBloc(header);
+    }
 }
 
 int main()
@@ -142,6 +151,8 @@ int main()
     printf("%lx\n",*((long*)(var2 + 8)));
 
     free_3is(var1);
+
+    char* var3 = malloc_3is(6);
 
     return 0;
 }
