@@ -173,37 +173,6 @@ static void insert_bloc(void* mem)
         bloc->ptr_next = it;
     }
 }
-/*
-static void* malloc_3is(size_t bloc_size)
-{
-    size_t total_size = sizeof(HEADER) + bloc_size + sizeof(long);
-    HEADER* available_bloc = get_bloc(bloc_size);
-    if (!available_bloc)
-    {
-        void* mem = sbrk(total_size);
-        if (mem == (void*)-1)
-        {
-            perror("sbrk");
-            return nullptr;
-        }
-
-        HEADER* free_mem = (HEADER*)mem;
-        free_mem->ptr_next = nullptr;
-        free_mem->bloc_size = bloc_size;
-        free_mem->magic_number = MAGIC_NUMBER;
-
-        //+1 to increment by the size of the HEADER and cast the char to increment byte by byte
-        long* footer = (long*)((char*)(free_mem + 1) + bloc_size);
-        long magic = MAGIC_NUMBER;
-        memcpy(footer, &magic, sizeof(long));
-
-        return check_overflow(free_mem) ? free_mem + 1 : nullptr;
-    }
-    printf("available\n");
-
-    return check_overflow(available_bloc) ? available_bloc + 1 : nullptr;
-
-}*/
 
 static void* malloc_3is(size_t bloc_size)
 {
