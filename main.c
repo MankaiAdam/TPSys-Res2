@@ -5,6 +5,7 @@
 
 #define MAGIC_NUMBER 0xBADA110CBADA110CL
 #define PREALLOC_SIZE 4096
+
 #define VAR_SIZE_1 6
 #define VAR_SIZE_2 12
 #define VAR_SIZE_3 200
@@ -32,7 +33,7 @@ static void print()
 
 static void split(HEADER* mem, size_t size)
 {
-    //+1 to increment by the size of the HEADER and cast the char to increment byte by byte
+    // Skip the header, then advance by the memory bloc to locate the footer.
     long* footer = (long*)((char*)(mem + 1) + size);
     long magic = MAGIC_NUMBER;
     memcpy(footer, &magic, sizeof(long));
@@ -77,6 +78,7 @@ static bool check_overflow(void* mem)
     HEADER* header = (HEADER*)mem;
     size_t size = header->bloc_size;
 
+    // Validate the header before checking the footer.
     if (header->magic_number != MAGIC_NUMBER)
     {
         fprintf(stderr, "Memory overflow detected!\n");
@@ -98,6 +100,7 @@ static HEADER* bloc_end(HEADER* bloc)
     return (HEADER*)((long*)((char*)(bloc + 1) + bloc->bloc_size) + 1);
 }
 
+// Merge physically adjacent free blocks to reduce memory fragmentation.
 static HEADER* merge_blocs(HEADER* bloc1, HEADER* bloc2, bool left)
 {
     if (left)
@@ -219,6 +222,8 @@ static void* malloc_3is(size_t bloc_size)
 
 static void free_3is(void* mem)
 {
+    if (mem == NULL)
+        return;
     HEADER* header = ((HEADER*)mem)-1;
     if (check_overflow(header))
     {
@@ -299,6 +304,13 @@ int main()
     free_3is(var5);
 
     print();
+
+    printf("======OVERFLOW TEST======\n");
+    char* test = malloc_3is(16);
+
+    test[16] = 'X';
+
+    free_3is(test);
 
     return 0;
 }
