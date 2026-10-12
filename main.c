@@ -13,6 +13,22 @@ typedef struct HEADER_TAG {
 
 static HEADER* list = NULL;
 
+void* split(HEADER* mem, size_t size)
+{
+    //+1 to increment by the size of the HEADER and cast the char to increment byte by byte
+    long* footer = (long*)((char*)(mem + 1) + size);
+    long magic = MAGIC_NUMBER;
+    memcpy(footer, &magic, sizeof(long));
+
+    HEADER* new_header = (HEADER*)(footer + 1);
+
+    new_header->ptr_next = mem->ptr_next;
+    new_header->bloc_size = mem->bloc_size - (size + sizeof(HEADER) + sizeof(long));
+    new_header->magic_number = MAGIC_NUMBER;
+    mem->bloc_size = size;
+    mem->ptr_next = new_header;
+}
+
 static HEADER* get_bloc(size_t size)
 {
     HEADER* it = list;
@@ -20,8 +36,13 @@ static HEADER* get_bloc(size_t size)
 
     while (it)
     {
-        if (it->bloc_size == size)
+        if (it->bloc_size >= size)
         {
+            size_t rem = it->bloc_size - size;
+            if (rem > sizeof(HEADER) + sizeof(long))
+                split(it,size);
+
+            //remove bloc from list
             if (prev == NULL)
                 list = it->ptr_next;
             else
