@@ -76,7 +76,7 @@ static bool check_overflow(void* mem)
     return true;
 }
 
-static void insertBloc(void* mem)
+static void insert_bloc(void* mem)
 {
     HEADER* bloc = (HEADER*)mem;
 
@@ -142,7 +142,7 @@ static void free_3is(void* mem)
     HEADER* header = ((HEADER*)mem)-1;
     if (check_overflow(header))
     {
-        insertBloc(header);
+        insert_bloc(header);
     }
 }
 
