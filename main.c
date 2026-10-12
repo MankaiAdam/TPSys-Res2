@@ -26,6 +26,22 @@ static bool is_available(size_t size)
     return false;
 }
 
+bool check_overflow(void* mem)
+{
+
+    HEADER* header = ((HEADER*)mem)-1;
+    size_t size = header->bloc_size;
+
+    long footer = *(long*)((char*)mem + size);
+
+    if (footer != MAGIC_NUMBER)
+    {
+        perror("Overflow");
+        return false;
+    }
+    return true;
+}
+
 static void insertBloc(void* mem)
 {
     HEADER* bloc = (HEADER*)mem;
@@ -70,14 +86,15 @@ void* malloc_3is(size_t bloc_size)
         long magic = MAGIC_NUMBER;
         memcpy(footer, &magic, sizeof(long));
 
-        return free_mem + 1;
+        return check_overflow(free_mem + 1) ? free_mem + 1 : nullptr;
     }
     printf("available");
 }
 
 void free_3is(void* mem)
 {
-    insertBloc(mem);
+    if (check_overflow(mem))
+        insertBloc(mem);
 }
 
 int main()
@@ -100,7 +117,7 @@ int main()
     printf("======FOOTER======\n");
     printf("%lx\n",*((long*)(var1 + 6)));
 
-    char* var2 = malloc_3is(6);
+    char* var2 = malloc_3is(8);
 
     printf("======ADDRESS======\n");
     printf("%p\n",var2);
@@ -116,7 +133,7 @@ int main()
     printf("%lx\n",header2->magic_number);
 
     printf("======FOOTER======\n");
-    printf("%lx\n",*((long*)(var2 + 6)));
+    printf("%lx\n",*((long*)(var2 + 8)));
 
     free_3is(var1);
 
