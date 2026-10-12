@@ -4,6 +4,10 @@
 #include <unistd.h>
 
 #define MAGIC_NUMBER 0xBADA110CBADA110CL
+#define PREALLOC_SIZE 4096
+#define VAR_SIZE_1 6
+#define VAR_SIZE_2 12
+#define VAR_SIZE_3 200
 
 typedef struct HEADER_TAG {
     struct HEADER_TAG * ptr_next;
@@ -75,7 +79,7 @@ static bool check_overflow(void* mem)
 
     if (header->magic_number != MAGIC_NUMBER)
     {
-        perror("Overflow");
+        fprintf(stderr, "Memory overflow detected!\n");
         return false;
     }
 
@@ -83,7 +87,7 @@ static bool check_overflow(void* mem)
 
     if (footer != MAGIC_NUMBER)
     {
-        perror("Overflow");
+        fprintf(stderr, "Memory overflow detected!\n");
         return false;
     }
     return true;
@@ -96,7 +100,6 @@ static HEADER* bloc_end(HEADER* bloc)
 
 static HEADER* merge_blocs(HEADER* bloc1, HEADER* bloc2, bool left)
 {
-    //printf("%lu | %lu | %lu | %lu\n", prev->bloc_size, bloc->bloc_size, sizeof(HEADER), sizeof(long));
     if (left)
     {
         HEADER* it = list;
@@ -170,7 +173,7 @@ static void insert_bloc(void* mem)
         bloc->ptr_next = it;
     }
 }
-
+/*
 static void* malloc_3is(size_t bloc_size)
 {
     size_t total_size = sizeof(HEADER) + bloc_size + sizeof(long);
@@ -200,6 +203,49 @@ static void* malloc_3is(size_t bloc_size)
 
     return check_overflow(available_bloc) ? available_bloc + 1 : nullptr;
 
+}*/
+
+static void* malloc_3is(size_t bloc_size)
+{
+    HEADER* available_bloc = get_bloc(bloc_size);
+
+    if (available_bloc)
+    {
+        printf("Reusing a free block\n");
+        return check_overflow(available_bloc) ? available_bloc + 1 : nullptr;
+    }
+
+    size_t required_size =
+        sizeof(HEADER) + bloc_size + sizeof(long);
+
+    size_t allocation_size = PREALLOC_SIZE;
+
+    // If the request is too large, allocate enough for it.
+    if (allocation_size < required_size)
+        allocation_size = required_size;
+
+    void* mem = sbrk(allocation_size);
+
+    if (mem == (void*)-1)
+    {
+        perror("sbrk");
+        return nullptr;
+    }
+
+    HEADER* new_bloc = (HEADER*)mem;
+
+    new_bloc->ptr_next = nullptr;
+    new_bloc->bloc_size = allocation_size - sizeof(HEADER) - sizeof(long);
+    new_bloc->magic_number = MAGIC_NUMBER;
+
+    long magic = MAGIC_NUMBER;
+    long* footer = (long*)((char*)(new_bloc + 1)+ new_bloc->bloc_size);
+    memcpy(footer, &magic, sizeof(long));
+
+    // Insert the newly acquired region into the free list.
+    insert_bloc(new_bloc);
+
+    return malloc_3is(bloc_size);
 }
 
 static void free_3is(void* mem)
@@ -213,7 +259,7 @@ static void free_3is(void* mem)
 
 int main()
 {
-    char* var1 = malloc_3is(6);
+    char* var1 = malloc_3is(VAR_SIZE_1);
 
     printf("======ADDRESS  VAR1======\n");
     printf("%p\n",var1);
@@ -229,9 +275,9 @@ int main()
     printf("%lx\n",header1->magic_number);
 
     printf("======FOOTER======\n");
-    printf("%lx\n",*((long*)(var1 + 6)));
+    printf("%lx\n",*((long*)(var1 + VAR_SIZE_1)));
 
-    char* var2 = malloc_3is(200);
+    char* var2 = malloc_3is(VAR_SIZE_3);
 
     printf("======ADDRESS  VAR2======\n");
     printf("%p\n",var2);
@@ -247,14 +293,14 @@ int main()
     printf("%lx\n",header2->magic_number);
 
     printf("======FOOTER======\n");
-    printf("%lx\n",*((long*)(var2 + 8)));
+    printf("%lx\n",*((long*)(var2 + VAR_SIZE_3)));
 
     printf("======RECYCLE TEST======\n");
     free_3is(var1);
     free_3is(var2);
     print();
 
-    char* var3 = malloc_3is(6);
+    char* var3 = malloc_3is(VAR_SIZE_1);
     printf("======ADDRESS VAR3======\n");
     printf("%p\n",var3);
 
@@ -263,14 +309,14 @@ int main()
     printf("======SPLIT TEST======\n");
     //adresses are 38 bytes apart (24 for HEADER + 6 for DATA + 8 for the FOOTER)
 
-    char* var4 = malloc_3is(6);
+    char* var4 = malloc_3is(VAR_SIZE_1);
 
     printf("======ADDRESS VAR4======\n");
     printf("%p\n",var4);
 
     print();
 
-    char* var5 = malloc_3is(12);
+    char* var5 = malloc_3is(VAR_SIZE_2);
 
     printf("======ADDRESS VAR5======\n");
     printf("%p\n",var5);
