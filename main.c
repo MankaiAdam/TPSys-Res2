@@ -6,14 +6,14 @@
 #define MAGIC_NUMBER 0xBADA110CBADA110CL
 
 typedef struct HEADER_TAG {
-    struct HEADER_TAG * ptr_next; /* pointe sur le prochain bloc libre */
-    size_t bloc_size; /* taille du memory bloc en octets*/
-    long magic_number; /* 0xBADA110CBADA110CL */
+    struct HEADER_TAG * ptr_next;
+    size_t bloc_size;
+    long magic_number;
 } HEADER;
 
-static HEADER* list = NULL;
+static HEADER* list = nullptr;
 
-void* split(HEADER* mem, size_t size)
+static void split(HEADER* mem, size_t size)
 {
     //+1 to increment by the size of the HEADER and cast the char to increment byte by byte
     long* footer = (long*)((char*)(mem + 1) + size);
@@ -32,7 +32,7 @@ void* split(HEADER* mem, size_t size)
 static HEADER* get_bloc(size_t size)
 {
     HEADER* it = list;
-    HEADER* prev = NULL;
+    HEADER* prev = nullptr;
 
     while (it)
     {
@@ -55,7 +55,7 @@ static HEADER* get_bloc(size_t size)
     return nullptr;
 }
 
-bool check_overflow(void* mem)
+static bool check_overflow(void* mem)
 {
     HEADER* header = (HEADER*)mem;
     size_t size = header->bloc_size;
@@ -82,13 +82,14 @@ static void insertBloc(void* mem)
 
     if (list == NULL)
     {
-        bloc->ptr_next = NULL;
+        bloc->ptr_next = nullptr;
         list = bloc;
         return;
     }
 
     HEADER* it = list;
-    HEADER* prev = NULL;
+    HEADER* prev = nullptr;
+
     if (it > bloc)
     {
         bloc->ptr_next = it;
@@ -105,7 +106,7 @@ static void insertBloc(void* mem)
     bloc->ptr_next = it;
 }
 
-void* malloc_3is(size_t bloc_size)
+static void* malloc_3is(size_t bloc_size)
 {
     size_t total_size = sizeof(HEADER) + bloc_size + sizeof(long);
     HEADER* available_bloc = get_bloc(bloc_size);
@@ -119,7 +120,7 @@ void* malloc_3is(size_t bloc_size)
         }
 
         HEADER* free_mem = (HEADER*)mem;
-        free_mem->ptr_next = NULL;
+        free_mem->ptr_next = nullptr;
         free_mem->bloc_size = bloc_size;
         free_mem->magic_number = MAGIC_NUMBER;
 
@@ -136,7 +137,7 @@ void* malloc_3is(size_t bloc_size)
 
 }
 
-void free_3is(void* mem)
+static void free_3is(void* mem)
 {
     HEADER* header = ((HEADER*)mem)-1;
     if (check_overflow(header))
@@ -159,7 +160,7 @@ int main()
     printf("======HEADER======\n");
     HEADER* header1 = ((HEADER*)var1)-1;
     printf("%p\n",header1->ptr_next);
-    printf("%d\n",header1->bloc_size);
+    printf("%lu\n",header1->bloc_size);
     printf("%lx\n",header1->magic_number);
 
     printf("======FOOTER======\n");
@@ -177,7 +178,7 @@ int main()
     printf("======HEADER======\n");
     HEADER* header2 = ((HEADER*)var2)-1;
     printf("%p\n",header2->ptr_next);
-    printf("%d\n",header2->bloc_size);
+    printf("%lu\n",header2->bloc_size);
     printf("%lx\n",header2->magic_number);
 
     printf("======FOOTER======\n");
@@ -197,7 +198,7 @@ int main()
     printf("======HEADER======\n");
     HEADER* header3 = ((HEADER*)var3)-1;
     printf("%p\n",header3->ptr_next);
-    printf("%d\n",header3->bloc_size);
+    printf("%lu\n",header3->bloc_size);
     printf("%lx\n",header3->magic_number);
 
     printf("======FOOTER======\n");
