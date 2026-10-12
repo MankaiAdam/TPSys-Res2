@@ -12,15 +12,23 @@ typedef struct HEADER_TAG {
 } HEADER;
 
 static HEADER* list = NULL;
-static size_t max_size = 0;
 
-static HEADER* available(size_t size)
+static HEADER* get_bloc(size_t size)
 {
     HEADER* it = list;
+    HEADER* prev = NULL;
+
     while (it)
     {
         if (it->bloc_size == size)
+        {
+            if (prev == NULL)
+                list = it->ptr_next;
+            else
+                prev -> ptr_next = it->ptr_next;
             return it;
+        }
+        prev= it;
         it = it->ptr_next;
     }
     return nullptr;
@@ -79,7 +87,7 @@ static void insertBloc(void* mem)
 void* malloc_3is(size_t bloc_size)
 {
     size_t total_size = sizeof(HEADER) + bloc_size + sizeof(long);
-    HEADER* available_bloc = available(bloc_size);
+    HEADER* available_bloc = get_bloc(bloc_size);
     if (!available_bloc)
     {
         void* mem = sbrk(total_size);
