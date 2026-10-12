@@ -32,6 +32,12 @@ bool check_overflow(void* mem)
     HEADER* header = ((HEADER*)mem)-1;
     size_t size = header->bloc_size;
 
+    if (header->magic_number != MAGIC_NUMBER)
+    {
+        perror("Overflow");
+        return false;
+    }
+
     long footer = *(long*)((char*)mem + size);
 
     if (footer != MAGIC_NUMBER)
