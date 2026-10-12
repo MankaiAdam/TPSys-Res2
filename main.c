@@ -14,16 +14,16 @@ typedef struct HEADER_TAG {
 static HEADER* list = NULL;
 static size_t max_size = 0;
 
-static bool is_available(size_t size)
+static HEADER* available(size_t size)
 {
     HEADER* it = list;
     while (it)
     {
-        if (it->bloc_size >= size)
-            return true;
+        if (it->bloc_size == size)
+            return it;
         it = it->ptr_next;
     }
-    return false;
+    return nullptr;
 }
 
 bool check_overflow(void* mem)
@@ -79,7 +79,8 @@ static void insertBloc(void* mem)
 void* malloc_3is(size_t bloc_size)
 {
     size_t total_size = sizeof(HEADER) + bloc_size + sizeof(long);
-    if (!is_available(bloc_size))
+    HEADER* available_bloc = available(bloc_size);
+    if (!available_bloc)
     {
         void* mem = sbrk(total_size);
         if (mem == (void*)-1)
@@ -100,7 +101,10 @@ void* malloc_3is(size_t bloc_size)
 
         return check_overflow(free_mem) ? free_mem + 1 : nullptr;
     }
-    printf("available");
+    printf("available\n");
+
+    return check_overflow(available_bloc) ? available_bloc + 1 : nullptr;
+
 }
 
 void free_3is(void* mem)
@@ -154,5 +158,20 @@ int main()
 
     char* var3 = malloc_3is(6);
 
+    printf("======ADDRESS======\n");
+    printf("%p\n",var3);
+
+    printf("======VALUE======\n");
+    strcpy(var3,"12345");
+    printf("%s\n",var3);
+
+    printf("======HEADER======\n");
+    HEADER* header3 = ((HEADER*)var3)-1;
+    printf("%p\n",header3->ptr_next);
+    printf("%d\n",header3->bloc_size);
+    printf("%lx\n",header3->magic_number);
+
+    printf("======FOOTER======\n");
+    printf("%lx\n",*((long*)(var3 + 6)));
     return 0;
 }
